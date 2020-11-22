@@ -1,14 +1,13 @@
-# Original version：https://github.com/emmahodcroft/cluster-picker-and-cluster-matcher/blob/master/docs/ClusterTutorial/MCC_to_NWK.R
-# It has too many bugs，so I improve it.
 # Date：2020.11.21
 # Author：Yusy
-
+# Convert MCC TREE TO NEWICK FORMAT
 
 rm(list=ls())
-setwd("C:/Code/R/MCC_to_NWK/")
+setwd("D:/Code/R/MCC_to_NWK/")
 
 # needs package ape
 library(ape)
+library(treeio)
 
 # FUNCTION DEFINITION
 
@@ -47,8 +46,7 @@ for (i in 1:length(sb)) {
 }
 
 tr <- ape::read.tree(text=trLine)
-
-
+tr_r <- ape::read.tree(text = trLine)
 if (doLadderize) {
   tr		<- multi2di(tr)
   tr		<- ladderize(tr, right=FALSE)
@@ -58,25 +56,24 @@ if (doLadderize) {
   }
 }
 
-
 # extract proper tip names
 tips 		<- unlist(apply(as.matrix(tr$tip.label), 1, strsplit, "\\["))
 tinds 	<- match(tips, taxaTbl[,1])
 tr$tip.label <- taxaTbl[tinds,2]
 
-# extract posterior support
-tr$node.label <- gregexpr("posterior=([0-9]+\\.)?[0-9Ee\\-]+", trLine)
-#gregexpr("posterior=([0-9]+\\.)?[0-9Ee\\-]+",'[&posterior=0.41626794258373206]:0.07846942508175658')
-tr_r <- read.tree(text = trLine)
-for (i in 1:length(tr$node.label[[1]])) {
-  js 	<- tr[["node.label"]][[1]][i]
-  je	<- js + attributes(tr$node.label[[1]])$match.length[i]-1
-  nn	<- substring(trLine, js, je)
-  nn	<- gsub("posterior=", "", nn)
-  tr_r$node.label[i] <- nn
-}
 
-tr$node.label <- tr_r$node.label
+# extract posterior support
+tr_mcc <- treeio::read.beast('h3n2_1027_beast_mcc.tre')
+#tr_nwk <- treeio::read.newick('h3n2_1027_beast_mcc.tre.nwk')
+#getNodeNum(tr_mcc)
+#getNodeNum(tr_nwk)
+
+for (i in 1:length(tr_mcc@data$posterior)){
+  id <- as.numeric(tr_mcc@data$node[i])
+  tr_r$node.label[id] <- tr_mcc@data$posterior[i]
+}
+tr$node.label = na.omit(tr_r$node.label)
+
 pp		<- as.numeric(tr$node.label)
 inds		<- which(!is.finite(pp))
 if (length(inds) > 0) {
@@ -84,12 +81,14 @@ if (length(inds) > 0) {
 }
 tr$node.label <- format(pp, digits=4)
 
-tr$node.label[1] <- "0.000"
-trString = ape::write.tree(tr)
+#tr$node.label[1] <- "0.000"
+
+trString = treeio::write.tree(tr)
 
 # this string should end with support:root length
 trString	<- gsub(";","",trString)
 trString	<- paste(trString, ":0.0;", sep="")
+trString	<- write.tree(tr,file='')
 
 if (root0) {
   # set support at root to 0 for cluster picker
@@ -111,16 +110,11 @@ if (root0) {
 }
 
 outName <- paste(fname, ".posterior.nwk", sep="")
-write.tree(tr, file=outName)
+write(trString, file=outName)
 
 print(paste("Newick tree written to",outName))
 
 # uncomment the line below if you actually want the tree object returned to the R-workspace
 # return( tr )
-
-
-
-
-
 
 
