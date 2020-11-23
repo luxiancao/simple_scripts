@@ -1,52 +1,27 @@
-# Date：2020.11.21
+# Date：2020.11.23
 # Author：Yusy
 # Convert MCC TREE TO NEWICK FORMAT
 
 rm(list=ls())
 setwd("D:/Code/R/MCC_to_NWK/")
 
-# needs package ape
-library(ape)
+# needs package treeio
 library(treeio)
 
 # FUNCTION DEFINITION
 
 # read the MCC tree file from TreeAnnotator
-fname = 'h3n2_1027_beast_mcc.tre'
+fname = 'H7N9_HA_cd99_GMRF_MCC_grid.trees'
 doLadderize=FALSE
 tol=1e-8
 root0=TRUE
 
-lines 	<- readLines(fname)
+#lines 	<- readLines(fname)
 
-# get the taxa information
-ts		<- grep("Translate", lines)[1]+1
-te		<- grep(";", lines)[6]-1
-taxaLines 	<- lines[ts:te]
-taxaTbl	<- unlist(apply(as.matrix(taxaLines), 1, strsplit, " "))
-taxaTbl	<- t(matrix(taxaTbl, 2, length(taxaTbl)/2))
-taxaTbl[,1] <- gsub("\t", "", taxaTbl[,1])
-taxaTbl[,2] <- gsub("'", "", taxaTbl[,2])
-taxaTbl[,2] <- gsub(",", "", taxaTbl[,2])
+tr_mcc <- treeio::read.beast(fname)
+tr <- treeio::read.nexus(fname)
+tr_r <- treeio::read.nexus(fname)
 
-# get strip the tree string from the relevant line
-trLine	<- lines[te+2]
-trLine	<- strsplit(trLine, "\\[\\&R\\]")[[1]][2]
-
-sb		<- gregexpr("\\[", trLine)[[1]]
-eb		<- gregexpr("\\]", trLine)[[1]]
-
-# replace , by | in node names
-for (i in 1:length(sb)) {
-  before <- substring(trLine, 1, sb[i])
-  between<- substring(trLine, sb[i]+1, eb[i]-1)
-  after  <- substring(trLine, eb[i], nchar(trLine))
-  between<- gsub(",", "|", between)
-  trLine <- paste(before,between,after,sep="")
-}
-
-tr <- ape::read.tree(text=trLine)
-tr_r <- ape::read.tree(text = trLine)
 if (doLadderize) {
   tr		<- multi2di(tr)
   tr		<- ladderize(tr, right=FALSE)
@@ -57,13 +32,13 @@ if (doLadderize) {
 }
 
 # extract proper tip names
-tips 		<- unlist(apply(as.matrix(tr$tip.label), 1, strsplit, "\\["))
-tinds 	<- match(tips, taxaTbl[,1])
-tr$tip.label <- taxaTbl[tinds,2]
+#tips 		<- unlist(apply(as.matrix(tr$tip.label), 1, strsplit, "\\["))
+#tinds 	<- match(tips, taxaTbl[,1])
+#tr$tip.label <- taxaTbl[tinds,2]
 
 
 # extract posterior support
-tr_mcc <- treeio::read.beast('h3n2_1027_beast_mcc.tre')
+#tr_mcc <- treeio::read.beast('h3n2_1027_beast_mcc.tre')
 #tr_nwk <- treeio::read.newick('h3n2_1027_beast_mcc.tre.nwk')
 #getNodeNum(tr_mcc)
 #getNodeNum(tr_nwk)
